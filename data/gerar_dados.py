@@ -65,6 +65,12 @@ CIDADES = [  # (cidade, UF, peso)
     ("Florianópolis", "SC", 0.05),
 ]
 
+MOTIVOS = {
+    "Voluntário": ["Nova oportunidade", "Salário", "Mudança de cidade", "Insatisfação com a liderança", "Motivos pessoais"],
+    "Involuntário": ["Baixo desempenho", "Reestruturação", "Corte de custos", "Conduta"],
+}
+CHANCE_VOLUNTARIO = 0.6
+
 
 def data_aleatoria(inicio: date, fim: date) -> date:
     dias = (fim - inicio).days
@@ -92,6 +98,18 @@ def sortear_contrato(area: str, nivel: str) -> str:
         return "Estágio"
     chance_pj = 0.30 if area == "Tecnologia" else 0.05
     return "PJ" if random.random() < chance_pj else "CLT"
+
+
+def sortear_desligamento(admissao: date, rotatividade: float) -> date | None:
+    chance_mensal = 1 - (1 - rotatividade) ** (1 / 12)
+    dia = max(admissao, INICIO)
+    while dia <= FIM:
+        meses_de_casa = (dia - admissao).days / 30
+        chance = chance_mensal * 2 if meses_de_casa < 12 else chance_mensal
+        if random.random() < chance:
+            return min(dia + timedelta(days=random.randint(1, 30)), FIM)
+        dia += timedelta(days=30)
+    return None
 
 
 def gerar_areas() -> pd.DataFrame:
@@ -139,15 +157,41 @@ def gerar_colaboradores() -> pd.DataFrame:
     return colaboradores
 
 
+def gerar_desligamentos(colaboradores: pd.DataFrame) -> pd.DataFrame:
+    linhas = []
+    for id_colaborador, id_area, admissao in zip(
+        colaboradores["id_colaborador"], colaboradores["id_area"], colaboradores["data_admissao"]
+    ):
+        area = AREAS[id_area - 1]
+        data = sortear_desligamento(admissao, area["rotatividade"])
+        if data is None:
+            continue
+        tipo = "Voluntário" if random.random() < CHANCE_VOLUNTARIO else "Involuntário"
+        linhas.append({
+            "id_colaborador": id_colaborador,
+            "data_desligamento": data,
+            "tipo": tipo,
+            "motivo": random.choice(MOTIVOS[tipo]),
+        })
+
+    desligamentos = pd.DataFrame(linhas).sort_values("data_desligamento", ignore_index=True)
+    desligamentos.insert(0, "id_desligamento", range(1, len(desligamentos) + 1))
+    return desligamentos
+
+
 if __name__ == "__main__":
     PASTA_SAIDA.mkdir(parents=True, exist_ok=True)
 
     areas = gerar_areas()
-    areas.to_csv(PASTA_SAIDA / "areas.csv", index=False)
-
     colaboradores = gerar_colaboradores()
-    colaboradores.to_csv(PASTA_SAIDA / "colaboradores.csv", index=False)
+    desligamentos = gerar_desligamentos(colaboradores)
 
-    print(colaboradores.head())
-    print(f"\n{len(colaboradores)} colaboradores")
-    print(colaboradores["nivel"].value_counts())
+    saiu = colaboradores["id_colaborador"].isin(desligamentos["id_colaborador"])
+    colaboradores["status"] = saiu.map({True: "Desligado", False: "Ativo"})
+
+    areas.to_csv(PASTA_SAIDA / "areas.csv", index=False)
+    colaboradores.to_csv(PASTA_SAIDA / "colaboradores.csv", index=False)
+    desligamentos.to_csv(PASTA_SAIDA / "desligamentos.csv", index=False)
+
+    print(f"{len(colaboradores)} colaboradores, {len(desligamentos)} desligamentos")
+    print(colaboradores["status"].value_counts())
