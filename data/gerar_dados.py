@@ -179,6 +179,12 @@ def gerar_desligamentos(colaboradores: pd.DataFrame) -> pd.DataFrame:
     return desligamentos
 
 
+def marcar_status(colaboradores: pd.DataFrame, desligamentos: pd.DataFrame) -> pd.DataFrame:
+    saiu = colaboradores["id_colaborador"].isin(desligamentos["id_colaborador"])
+    colaboradores["status"] = saiu.map({True: "Desligado", False: "Ativo"})
+    return colaboradores
+
+
 if __name__ == "__main__":
     PASTA_SAIDA.mkdir(parents=True, exist_ok=True)
 
@@ -186,8 +192,7 @@ if __name__ == "__main__":
     colaboradores = gerar_colaboradores()
     desligamentos = gerar_desligamentos(colaboradores)
 
-    saiu = colaboradores["id_colaborador"].isin(desligamentos["id_colaborador"])
-    colaboradores["status"] = saiu.map({True: "Desligado", False: "Ativo"})
+    colaboradores = marcar_status(colaboradores, desligamentos)
 
     areas.to_csv(PASTA_SAIDA / "areas.csv", index=False)
     colaboradores.to_csv(PASTA_SAIDA / "colaboradores.csv", index=False)
