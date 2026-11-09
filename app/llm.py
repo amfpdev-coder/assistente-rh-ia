@@ -40,7 +40,11 @@ def criar_cliente() -> OpenAI:
 
 
 def conectar_anon() -> duckdb.DuckDBPyConnection:
-    return duckdb.connect(str(CAMINHO_ANON), read_only=True)
+    return duckdb.connect(
+        str(CAMINHO_ANON),
+        read_only=True,
+        config={"enable_external_access": False},
+    )
 
 
 def limpar_sql(texto: str) -> str:
