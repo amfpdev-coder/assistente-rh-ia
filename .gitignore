@@ -3,4 +3,5 @@
 __pycache__/
 data/brutos/
 *.duckdb
+!data/rh_anon.duckdb
 CLAUDE.md
