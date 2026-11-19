@@ -2,7 +2,7 @@
 
 Faça perguntas em português sobre dados de RH e receba a resposta, a consulta SQL usada e um gráfico, sem que a IA veja dados pessoais.
 
-> 🚧 Em construção. Prontos: base de dados fictícia, pseudonimização (LGPD) e o assistente no terminal. Próximos: interface web e avaliação de qualidade.
+> 🚧 Em construção. Prontos: base de dados fictícia, pseudonimização (LGPD) e o assistente com interface web. Próximo: avaliação de qualidade.
 
 ## O problema
 
@@ -48,6 +48,8 @@ Por isso, tecnicamente, é uma **pseudonimização**: quem tem a chave consegue 
 
 Um teste automático (`tests/test_anonimizar.py`) procura padrões de CPF e e-mail em todas as colunas de texto da base anonimizada e falha se encontrar qualquer um.
 
+Só a base pseudonimizada (`data/rh_anon.duckdb`) está no repositório, para a demo publicada funcionar. A base original e os CSVs com nome, CPF e e-mail ficam fora, no `.gitignore`.
+
 ## Segurança
 
 O SQL é gerado por uma IA, então o sistema parte do princípio de que ele pode ser malicioso, por exemplo, por *prompt injection* na pergunta. São três camadas, todas cobertas por testes (`tests/test_seguranca.py`):
@@ -62,7 +64,7 @@ A terceira camada existe porque bloquear o que não é `SELECT` não basta: `SEL
 
 ## Stack
 
-Python, pandas, Faker, DuckDB, pytest e uma API de LLM compatível com OpenAI (padrão: Groq, modelo `openai/gpt-oss-120b`). Trocar de provedor é mudar 3 variáveis no `.env`.
+Python, pandas, Faker, DuckDB, pytest, Streamlit (com gráficos em Altair) e uma API de LLM compatível com OpenAI (padrão: Groq, modelo `openai/gpt-oss-120b`). Trocar de provedor é mudar 3 variáveis no `.env`.
 
 ## Como rodar localmente
 
@@ -74,7 +76,7 @@ source .venv/Scripts/activate   # Windows (Git Bash); no Linux/Mac: source .venv
 pip install -r requirements.txt
 ```
 
-Os dados são 100% fictícios, gerados com Faker. Nenhum dado pessoal real é usado, e os arquivos gerados não vão para o repositório.
+Os dados são 100% fictícios, gerados com Faker. Nenhum dado pessoal real é usado. A base pseudonimizada já vem no repositório; para só usar o assistente, pule a etapa de gerar os dados.
 
 Crie o arquivo `.env` a partir do `.env.example`, gere a chave de pseudonimização e coloque a chave da API do Groq (grátis em [console.groq.com](https://console.groq.com)):
 
@@ -92,7 +94,13 @@ python -m app.anonimizar            # banco pseudonimizado: data/rh_anon.duckdb
 pytest -v
 ```
 
-Faça uma pergunta:
+Abra a interface web (o navegador abre em `http://localhost:8501`):
+
+```bash
+streamlit run app/main.py
+```
+
+Ou pergunte direto pelo terminal:
 
 ```bash
 python -m app.llm "Quantas pessoas ativas há em Tecnologia?"
